@@ -264,7 +264,7 @@ export default function Dashboard() {
                                         </p>
                                         <div
                                             style={{
-                                                fontSize: card.unit === "VNĐ" ? 18 : 28,
+                                                fontSize: 28,
                                                 fontWeight: 800,
                                                 color: "#0f172a",
                                                 letterSpacing: "-0.5px",
