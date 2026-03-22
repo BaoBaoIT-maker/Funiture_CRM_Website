@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  @@map("users") // Tên bảng trong MySQL
+}
+
+model Product {
+  id               Int               @id @default(autoincrement())
+  name             String
+  category         String?
+  imageUrl         String?
+  basePrice        Int               @default(0)
+  status           Boolean           @default(true)
+  soldCount        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  
+  // Quan hệ 1-N với bảng trung gian
+  customerProducts CustomerProduct[]
+
+  @@map("products")
+}
+
+model Customer {
+  id               Int               @id @default(autoincrement())
+  fullName         String
+  phone            String
+  email            String?
+  address          String?           @db.Text
+  budget           String?
+  totalAmount      Int               @default(0)
+  status           String            @default("Mới hỏi")
+  notes            String?           @db.Text
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  // Quan hệ 1-N với bảng trung gian
+  customerProducts CustomerProduct[]
+
+  @@map("customers")
+}
+
+// Bảng trung gian chi tiết giỏ hàng (Khách hàng mua Sản phẩm nào)
+model CustomerProduct {
+  id          Int      @id @default(autoincrement())
+  customerId  Int
+  productId   Int?
+  quantity    Int      @default(1)
+  dealPrice   Int      @default(0)
+
+  // Khai báo khóa ngoại
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@map("customer_products")
+}
