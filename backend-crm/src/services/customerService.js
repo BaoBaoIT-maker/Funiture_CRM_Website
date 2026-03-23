@@ -2,9 +2,20 @@ import prisma from '../config/db.js';
 import { sendInvoiceEmail } from '../utils/sendEmail.js';
 
 const PAID_STATUS = 'Đã thanh toán';
+const CUSTOMER_STATUSES = ['Mới hỏi', 'Đang tư vấn', 'Đã báo giá', 'Đã thanh toán', 'Cần bảo hành'];
 
 const calculateTotalAmount = (products = []) => {
     return products.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.dealPrice)), 0);
+};
+
+const getValidatedStatus = (status, fallbackStatus) => {
+    const finalStatus = status || fallbackStatus;
+
+    if (!CUSTOMER_STATUSES.includes(finalStatus)) {
+        throw new Error('Trạng thái khách hàng không hợp lệ');
+    }
+
+    return finalStatus;
 };
 
 const processPaidCustomer = async (customerData) => {
@@ -47,11 +58,12 @@ export const createNewCustomer = async (data) => {
 
     const normalizedProducts = products || [];
     const calculatedTotal = calculateTotalAmount(normalizedProducts);
+    const validatedStatus = getValidatedStatus(status, 'Mới hỏi');
 
     const createdCustomer = await prisma.customer.create({
         data: {
             fullName, phone, email, address, budget, notes,
-            status: status || 'Mới hỏi',
+            status: validatedStatus,
             totalAmount: calculatedTotal,
             customerProducts: {
                 create: normalizedProducts.map(p => ({
@@ -94,6 +106,7 @@ export const updateCustomerDetail = async (id, data) => {
 
     const normalizedProducts = products || [];
     const calculatedTotal = calculateTotalAmount(normalizedProducts);
+    const validatedStatus = getValidatedStatus(status, currentCustomer.status);
 
     const updatedCustomer = await prisma.customer.update({
         where: { id: Number(id) },
@@ -104,7 +117,7 @@ export const updateCustomerDetail = async (id, data) => {
             address,
             budget,
             notes,
-            status: status || currentCustomer.status,
+            status: validatedStatus,
             totalAmount: calculatedTotal,
             customerProducts: {
                 deleteMany: {},
@@ -132,13 +145,15 @@ export const updateStatusAndProcessOrder = async (id, status) => {
         throw new Error('Không tìm thấy khách hàng');
     }
 
+    const validatedStatus = getValidatedStatus(status, currentCustomer.status);
+
     const updatedCustomer = await prisma.customer.update({
         where: { id: Number(id) },
-        data: { status },
+        data: { status: validatedStatus },
         include: { customerProducts: { include: { product: true } } }
     });
 
-    if (currentCustomer.status !== PAID_STATUS && status === PAID_STATUS) {
+    if (currentCustomer.status !== PAID_STATUS && validatedStatus === PAID_STATUS) {
         await processPaidCustomer(updatedCustomer);
     }
 
