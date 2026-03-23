@@ -18,6 +18,47 @@ const getValidatedStatus = (status, fallbackStatus) => {
     return finalStatus;
 };
 
+const normalizeAndValidateProducts = async (products = []) => {
+    const normalizedProducts = products.map((item) => ({
+        productId: Number(item.productId),
+        quantity: Number(item.quantity),
+        dealPrice: Number(item.dealPrice),
+    }));
+
+    for (const item of normalizedProducts) {
+        if (!Number.isInteger(item.productId) || item.productId <= 0) {
+            throw new Error('Sản phẩm không hợp lệ');
+        }
+
+        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+            throw new Error('Số lượng phải lớn hơn 0');
+        }
+
+        if (!Number.isFinite(item.dealPrice) || item.dealPrice < 0) {
+            throw new Error('Giá chốt không hợp lệ');
+        }
+    }
+
+    const productIds = [...new Set(normalizedProducts.map((item) => item.productId))];
+    if (productIds.length === 0) {
+        return [];
+    }
+
+    const existingProducts = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true },
+    });
+
+    const existingIds = new Set(existingProducts.map((product) => product.id));
+    const hasMissingProduct = productIds.some((id) => !existingIds.has(id));
+
+    if (hasMissingProduct) {
+        throw new Error('Có sản phẩm không tồn tại trong hệ thống');
+    }
+
+    return normalizedProducts;
+};
+
 const processPaidCustomer = async (customerData) => {
     for (const item of customerData.customerProducts) {
         if (item.productId) {
@@ -56,7 +97,7 @@ export const fetchCustomerById = async (id) => {
 export const createNewCustomer = async (data) => {
     const { fullName, phone, email, address, budget, notes, status, products } = data;
 
-    const normalizedProducts = products || [];
+    const normalizedProducts = await normalizeAndValidateProducts(products || []);
     const calculatedTotal = calculateTotalAmount(normalizedProducts);
     const validatedStatus = getValidatedStatus(status, 'Mới hỏi');
 
@@ -104,7 +145,7 @@ export const updateCustomerDetail = async (id, data) => {
         products,
     } = data;
 
-    const normalizedProducts = products || [];
+    const normalizedProducts = await normalizeAndValidateProducts(products || []);
     const calculatedTotal = calculateTotalAmount(normalizedProducts);
     const validatedStatus = getValidatedStatus(status, currentCustomer.status);
 

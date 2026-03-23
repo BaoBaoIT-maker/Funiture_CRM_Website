@@ -60,6 +60,19 @@ export default function CustomerDetail() {
         [orderItems]
     );
 
+    const productPriceMap = useMemo(() => {
+        return products.reduce((map, product) => {
+            map[product.id] = toNumber(product.basePrice);
+            return map;
+        }, {});
+    }, [products]);
+
+    const hasValidOrderItems = useMemo(() => {
+        return orderItems.some(
+            (item) => Number(item?.productId) > 0 && toNumber(item?.quantity) > 0
+        );
+    }, [orderItems]);
+
     const fetchProducts = async () => {
         const productRes = await axiosClient.get("/products");
         setProducts(productRes.data?.data || []);
@@ -107,6 +120,11 @@ export default function CustomerDetail() {
     const handleSave = async () => {
         try {
             const values = await form.validateFields();
+            if (!values.orderItems || values.orderItems.length === 0) {
+                message.error("Vui lòng thêm ít nhất 1 sản phẩm vào đơn hàng");
+                return;
+            }
+
             const payload = {
                 fullName: values.fullName,
                 phone: values.phone,
@@ -123,6 +141,11 @@ export default function CustomerDetail() {
                         dealPrice: toNumber(item.dealPrice),
                     })),
             };
+
+            if (payload.products.length === 0) {
+                message.error("Vui lòng chọn sản phẩm hợp lệ trước khi lưu");
+                return;
+            }
 
             setSaving(true);
             await axiosClient.put(`/customers/${id}`, payload);
@@ -161,6 +184,7 @@ export default function CustomerDetail() {
                             icon={<SaveOutlined />}
                             loading={saving}
                             onClick={handleSave}
+                            disabled={!hasValidOrderItems || loading}
                             style={{
                                 background: "linear-gradient(135deg, #10b981, #14b8a6)",
                                 border: "none",
@@ -257,7 +281,7 @@ export default function CustomerDetail() {
                                 <Space direction="vertical" style={{ width: "100%" }} size={10}>
                                     {fields.map((field) => (
                                         <Row gutter={10} key={field.key} align="middle">
-                                            <Col xs={24} md={10}>
+                                            <Col xs={24} md={9}>
                                                 <Form.Item
                                                     name={[field.name, "productId"]}
                                                     rules={[{ required: true, message: "Chọn sản phẩm" }]}
@@ -266,6 +290,10 @@ export default function CustomerDetail() {
                                                     <Select
                                                         showSearch
                                                         placeholder="Chọn sản phẩm"
+                                                        onChange={(productId) => {
+                                                            const basePrice = productPriceMap[productId] || 0;
+                                                            form.setFieldValue(["orderItems", field.name, "dealPrice"], basePrice);
+                                                        }}
                                                         options={products.map((product) => ({
                                                             label: `${product.name} (${toNumber(product.basePrice).toLocaleString("vi-VN")} đ)`,
                                                             value: product.id,
@@ -274,19 +302,35 @@ export default function CustomerDetail() {
                                                     />
                                                 </Form.Item>
                                             </Col>
-                                            <Col xs={12} md={5}>
+                                            <Col xs={12} md={4}>
                                                 <Form.Item
                                                     name={[field.name, "quantity"]}
-                                                    rules={[{ required: true, message: "SL" }]}
+                                                    rules={[
+                                                        { required: true, message: "SL" },
+                                                        {
+                                                            validator: (_, value) =>
+                                                                toNumber(value) > 0
+                                                                    ? Promise.resolve()
+                                                                    : Promise.reject(new Error("SL > 0")),
+                                                        },
+                                                    ]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <InputNumber min={1} style={{ width: "100%" }} placeholder="SL" />
                                                 </Form.Item>
                                             </Col>
-                                            <Col xs={12} md={7}>
+                                            <Col xs={12} md={5}>
                                                 <Form.Item
                                                     name={[field.name, "dealPrice"]}
-                                                    rules={[{ required: true, message: "Giá chốt" }]}
+                                                    rules={[
+                                                        { required: true, message: "Giá chốt" },
+                                                        {
+                                                            validator: (_, value) =>
+                                                                toNumber(value) >= 0
+                                                                    ? Promise.resolve()
+                                                                    : Promise.reject(new Error("Giá >= 0")),
+                                                        },
+                                                    ]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <InputNumber
@@ -300,7 +344,12 @@ export default function CustomerDetail() {
                                                     />
                                                 </Form.Item>
                                             </Col>
-                                            <Col xs={24} md={2}>
+                                            <Col xs={16} md={4}>
+                                                <div style={{ fontWeight: 600, color: "#0f172a", textAlign: "right" }}>
+                                                    {(toNumber(orderItems[field.name]?.quantity) * toNumber(orderItems[field.name]?.dealPrice)).toLocaleString("vi-VN")} đ
+                                                </div>
+                                            </Col>
+                                            <Col xs={8} md={2}>
                                                 <Popconfirm
                                                     title="Xóa dòng sản phẩm này?"
                                                     onConfirm={() => remove(field.name)}
