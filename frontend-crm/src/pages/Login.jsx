@@ -1,20 +1,35 @@
 import React from "react";
 import { Form, Input, Button, Checkbox, message } from "antd";
+import { useNavigate } from "react-router-dom";
 import {
     UserOutlined,
     LockOutlined,
     ShopOutlined,
     ArrowRightOutlined,
 } from "@ant-design/icons";
+import axiosClient from "../api/axiosClient";
 
 export default function Login() {
     const [form] = Form.useForm();
+    const navigate = useNavigate();
 
     const handleLogin = async (values) => {
-        // Giả lập logic đăng nhập
-        localStorage.setItem("token", "mock-jwt-token-xyz");
-        message.success("Đăng nhập thành công!");
-        // Trong môi trường thật: navigate("/")
+        try {
+            const res = await axiosClient.post("/auth/login", values);
+            const token = res.data?.token;
+
+            if (!token) {
+                message.error("Không nhận được token đăng nhập");
+                return;
+            }
+
+            localStorage.setItem("token", token);
+            message.success("Đăng nhập thành công!");
+            navigate("/");
+        } catch (error) {
+            const apiMessage = error?.response?.data?.message;
+            message.error(apiMessage || "Đăng nhập thất bại");
+        }
     };
 
     return (
