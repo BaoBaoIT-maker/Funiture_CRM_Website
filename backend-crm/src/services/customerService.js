@@ -9,7 +9,7 @@ export const fetchAllCustomers = async () => {
 };
 
 export const createNewCustomer = async (data) => {
-    const { fullName, phone, email, address, budget, notes, products } = data;
+    const { fullName, phone, email, address, budget, notes, status, products } = data;
     
     let calculatedTotal = 0;
     if (products && products.length > 0) {
@@ -19,6 +19,7 @@ export const createNewCustomer = async (data) => {
     return await prisma.customer.create({
         data: {
             fullName, phone, email, address, budget, notes,
+            status: status || 'Mới hỏi',
             totalAmount: calculatedTotal,
             customerProducts: {
                 create: products ? products.map(p => ({
