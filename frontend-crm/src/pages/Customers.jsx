@@ -144,25 +144,18 @@ export default function Customers() {
                     })),
             };
 
-            await axiosClient.post("/customers", payload);
+            const res = await axiosClient.post("/customers", payload);
+            const createdCustomerId = res.data?.data?.id;
             message.success("Tạo khách hàng thành công");
             closeModal();
-            fetchCustomers();
+            await fetchCustomers();
+            if (createdCustomerId) {
+                navigate(`/customers/${createdCustomerId}`);
+            }
         } catch (error) {
             if (error?.errorFields) return;
             const apiMessage = error?.response?.data?.message;
             message.error(apiMessage || "Không thể tạo khách hàng");
-        }
-    };
-
-    const handleStatusChange = async (customerId, status) => {
-        try {
-            await axiosClient.patch(`/customers/${customerId}/status`, { status });
-            message.success("Cập nhật trạng thái thành công");
-            fetchCustomers();
-        } catch (error) {
-            const apiMessage = error?.response?.data?.message;
-            message.error(apiMessage || "Không thể cập nhật trạng thái");
         }
     };
 
@@ -195,22 +188,7 @@ export default function Customers() {
         {
             title: "Trạng thái",
             dataIndex: "status",
-            render: (value, record) => (
-                <Select
-                    value={value}
-                    onChange={(nextStatus) => handleStatusChange(record.id, nextStatus)}
-                    style={{ width: 170 }}
-                    options={STATUS_OPTIONS.map((status) => ({
-                        label: status,
-                        value: status,
-                    }))}
-                    optionRender={(option) => (
-                        <Tag color={statusTagColor[option.value]} style={{ marginInlineEnd: 0 }}>
-                            {option.value}
-                        </Tag>
-                    )}
-                />
-            ),
+            render: (value) => <Tag color={statusTagColor[value]}>{value}</Tag>,
         },
         {
             title: "Sản phẩm đã chọn",
