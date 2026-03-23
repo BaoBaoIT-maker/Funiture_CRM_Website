@@ -20,8 +20,10 @@ import {
     SearchOutlined,
     DeleteOutlined,
     SaveOutlined,
+    EyeOutlined,
 } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
 
 const { Text } = Typography;
@@ -51,6 +53,7 @@ function toNumber(value) {
 }
 
 export default function Customers() {
+    const navigate = useNavigate();
     const [customers, setCustomers] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -213,6 +216,21 @@ export default function Customers() {
             title: "Sản phẩm đã chọn",
             dataIndex: "customerProducts",
             render: (items) => items?.length || 0,
+        },
+        {
+            title: "Chi tiết",
+            key: "actions",
+            width: 110,
+            render: (_, record) => (
+                <Button
+                    type="text"
+                    icon={<EyeOutlined />}
+                    style={{ color: "#6366f1" }}
+                    onClick={() => navigate(`/customers/${record.id}`)}
+                >
+                    Mở
+                </Button>
+            ),
         },
     ];
 

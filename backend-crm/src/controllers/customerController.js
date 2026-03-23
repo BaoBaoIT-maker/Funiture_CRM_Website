@@ -18,6 +18,26 @@ export const createCustomer = async (req, res) => {
     }
 };
 
+export const getCustomerById = async (req, res) => {
+    try {
+        const customer = await customerService.fetchCustomerById(req.params.id);
+        res.status(200).json({ success: true, data: customer });
+    } catch (error) {
+        const statusCode = error.message === 'Không tìm thấy khách hàng' ? 404 : 500;
+        res.status(statusCode).json({ success: false, message: error.message });
+    }
+};
+
+export const updateCustomer = async (req, res) => {
+    try {
+        const updatedCustomer = await customerService.updateCustomerDetail(req.params.id, req.body);
+        res.status(200).json({ success: true, message: 'Cập nhật khách hàng thành công!', data: updatedCustomer });
+    } catch (error) {
+        const statusCode = error.message === 'Không tìm thấy khách hàng' ? 404 : 500;
+        res.status(statusCode).json({ success: false, message: error.message });
+    }
+};
+
 export const updateCustomerStatus = async (req, res) => {
     try {
         const { id } = req.params;
