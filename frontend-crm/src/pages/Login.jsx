@@ -1,6 +1,8 @@
 import React from "react";
 import { Form, Input, Button, Checkbox, message } from "antd";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+
 import {
     UserOutlined,
     LockOutlined,
@@ -12,23 +14,25 @@ import axiosClient from "../api/axiosClient";
 export default function Login() {
     const [form] = Form.useForm();
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async (values) => {
+        setLoading(true);
         try {
-            const res = await axiosClient.post("/auth/login", values);
-            const token = res.data?.token;
-
-            if (!token) {
-                message.error("Không nhận được token đăng nhập");
-                return;
-            }
-
-            localStorage.setItem("token", token);
+            const res = await axiosClient.post("/auth/login", {
+                username: values.username,
+                password: values.password,
+            });
+            // Backend trả về { success: true, token: "..." }
+            localStorage.setItem("token", res.data.token);
             message.success("Đăng nhập thành công!");
             navigate("/");
-        } catch (error) {
-            const apiMessage = error?.response?.data?.message;
-            message.error(apiMessage || "Đăng nhập thất bại");
+        } catch (err) {
+            // Axios ném lỗi khi status 4xx/5xx
+            const msg = err.response?.data?.message || "Đăng nhập thất bại";
+            message.error(msg);
+        } finally {
+            setLoading(false);
         }
     };
 
