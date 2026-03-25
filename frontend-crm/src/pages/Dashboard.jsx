@@ -1,4 +1,5 @@
-import { Card, Col, Row, Table, Tag, Progress, Avatar, Tooltip } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Card, Col, Row, Table, Tag, Progress, Avatar, Spin } from "antd";
 import {
     UserOutlined,
     RiseOutlined,
@@ -18,16 +19,16 @@ import {
     XAxis,
     YAxis,
     CartesianGrid,
-    Legend,
 } from "recharts";
+import axiosClient from "../api/axiosClient";
 
 // ── Mock data ──────────────────────────────────────────────────
 const statsCards = [
     {
         title: "Tổng khách hàng",
-        value: "120",
+        value: "0",
         unit: "khách",
-        change: "+12%",
+        change: "+0%",
         positive: true,
         icon: <UserOutlined />,
         color: "#6366f1",
@@ -35,9 +36,9 @@ const statsCards = [
     },
     {
         title: "Tổng doanh thu",
-        value: "500,000,000",
+        value: "0",
         unit: "VNĐ",
-        change: "+8.5%",
+        change: "+0%",
         positive: true,
         icon: <RiseOutlined />,
         color: "#f59e0b",
@@ -45,9 +46,9 @@ const statsCards = [
     },
     {
         title: "Sản phẩm đã bán",
-        value: "230",
+        value: "0",
         unit: "sản phẩm",
-        change: "-3%",
+        change: "0%",
         positive: false,
         icon: <ShoppingCartOutlined />,
         color: "#10b981",
@@ -57,7 +58,7 @@ const statsCards = [
         title: "Đơn chờ xử lý",
         value: "18",
         unit: "đơn hàng",
-        change: "+5",
+        change: "+0",
         positive: false,
         icon: <FireOutlined />,
         color: "#ef4444",
@@ -65,36 +66,36 @@ const statsCards = [
     },
 ];
 
-const customerStatusData = [
-    { name: "Mới hỏi", value: 35, color: "#6366f1" },
-    { name: "Đang tư vấn", value: 28, color: "#f59e0b" },
-    { name: "Đã chốt", value: 22, color: "#10b981" },
-    { name: "Đã thanh toán", value: 15, color: "#3b82f6" },
-];
+// const customerStatusData = [
+//     { name: "Mới hỏi", value: 35, color: "#6366f1" },
+//     { name: "Đang tư vấn", value: 28, color: "#f59e0b" },
+//     { name: "Đã chốt", value: 22, color: "#10b981" },
+//     { name: "Đã thanh toán", value: 15, color: "#3b82f6" },
+// ];
 
-const revenueData = [
-    { month: "T1", revenue: 42, target: 50 },
-    { month: "T2", revenue: 58, target: 50 },
-    { month: "T3", revenue: 45, target: 55 },
-    { month: "T4", revenue: 73, target: 60 },
-    { month: "T5", revenue: 62, target: 65 },
-    { month: "T6", revenue: 89, target: 70 },
-];
+// const revenueData = [
+//     { month: "T1", revenue: 42, target: 50 },
+//     { month: "T2", revenue: 58, target: 50 },
+//     { month: "T3", revenue: 45, target: 55 },
+//     { month: "T4", revenue: 73, target: 60 },
+//     { month: "T5", revenue: 62, target: 65 },
+//     { month: "T6", revenue: 89, target: 70 },
+// ];
 
-const topProducts = [
-    { key: 1, name: "Sofa Da Cao Cấp", sold: 42, revenue: "630,000,000", trend: 12 },
-    { key: 2, name: "Bàn Ăn Gỗ Sồi", sold: 38, revenue: "190,000,000", trend: 8 },
-    { key: 3, name: "Tủ Quần Áo 3 Cánh", sold: 31, revenue: "248,000,000", trend: -3 },
-    { key: 4, name: "Giường Ngủ King", sold: 25, revenue: "375,000,000", trend: 5 },
-    { key: 5, name: "Ghế Văn Phòng", sold: 94, revenue: "141,000,000", trend: 22 },
-];
+// const topProducts = [
+//     { key: 1, name: "Sofa Da Cao Cấp", sold: 42, revenue: "630,000,000", trend: 12 },
+//     { key: 2, name: "Bàn Ăn Gỗ Sồi", sold: 38, revenue: "190,000,000", trend: 8 },
+//     { key: 3, name: "Tủ Quần Áo 3 Cánh", sold: 31, revenue: "248,000,000", trend: -3 },
+//     { key: 4, name: "Giường Ngủ King", sold: 25, revenue: "375,000,000", trend: 5 },
+//     { key: 5, name: "Ghế Văn Phòng", sold: 94, revenue: "141,000,000", trend: 22 },
+// ];
 
-const recentCustomers = [
-    { key: 1, name: "Nguyễn Văn An", phone: "0901234567", status: "Đang tư vấn", amount: "25,000,000" },
-    { key: 2, name: "Trần Thị Bình", phone: "0912345678", status: "Đã chốt", amount: "48,000,000" },
-    { key: 3, name: "Lê Văn Cường", phone: "0923456789", status: "Mới hỏi", amount: "-" },
-    { key: 4, name: "Phạm Thị Dung", phone: "0934567890", status: "Đã thanh toán", amount: "72,000,000" },
-];
+// const recentCustomers = [
+//     { key: 1, name: "Nguyễn Văn An", phone: "0901234567", status: "Đang tư vấn", amount: "25,000,000" },
+//     { key: 2, name: "Trần Thị Bình", phone: "0912345678", status: "Đã chốt", amount: "48,000,000" },
+//     { key: 3, name: "Lê Văn Cường", phone: "0923456789", status: "Mới hỏi", amount: "-" },
+//     { key: 4, name: "Phạm Thị Dung", phone: "0934567890", status: "Đã thanh toán", amount: "72,000,000" },
+// ];
 
 const statusColors = {
     "Mới hỏi": "blue",
@@ -149,6 +150,284 @@ const CustomPieTooltip = ({ active, payload }) => {
 
 // ── Component ──────────────────────────────────────────────────
 export default function Dashboard() {
+    // New: loading / error / data states
+    const [customersData, setCustomersData] = useState([]);
+    const [productsData, setProductsData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchAll = async () => {
+            try {
+                setLoading(true);
+                const [custRes, prodRes] = await Promise.all([
+                    axiosClient.get("/customers"),
+                    axiosClient.get("/products"),
+                ]);
+                setCustomersData(custRes.data?.data || []);
+                setProductsData(prodRes.data?.data || []);
+            } catch (err) {
+                console.error(err);
+                setError(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAll();
+    }, []);
+
+    // Derived data memoized for performance
+    const derived = useMemo(() => {
+        // ─── Helper: tính doanh thu theo tháng ───
+        const getMonthRevenue = (monthOffset) => {
+            const d = new Date();
+            d.setMonth(d.getMonth() - monthOffset);
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            return customersData.reduce((s, c) => {
+                // Chỉ tính doanh thu từ những khách hàng đã thanh toán
+                if (c.status !== "Đã thanh toán") return s;
+
+                const created = c.createdAt ? new Date(c.createdAt) : null;
+                if (!created) return s;
+
+                if (created.getFullYear() === year && created.getMonth() + 1 === month) {
+                    return s + (c.totalAmount || 0);
+                }
+                return s;
+            }, 0);
+        };
+
+        // ─── Helper: tính khách hàng theo tháng ───
+        const getMonthCustomerCount = (monthOffset) => {
+            const d = new Date();
+            d.setMonth(d.getMonth() - monthOffset);
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            return customersData.filter((c) => {
+                const created = c.createdAt ? new Date(c.createdAt) : null;
+                if (!created) return false;
+                return created.getFullYear() === year && created.getMonth() + 1 === month;
+            }).length;
+        };
+
+        // ─── Helper: tính sản phẩm bán theo tháng ───
+        const getMonthProductsSold = (monthOffset) => {
+            const d = new Date();
+            // Lấy mốc thời gian: 0 là tháng này, 1 là tháng trước
+            d.setMonth(d.getMonth() - monthOffset);
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+
+            // Lặp qua danh sách KHÁCH HÀNG / ĐƠN HÀNG thay vì danh sách sản phẩm
+            return customersData.reduce((totalProducts, customer) => {
+                // Chỉ đếm sản phẩm của những đơn đã chốt hoặc đã thanh toán
+                if (customer.status !== "Đã thanh toán" && customer.status !== "Đã chốt") {
+                    return totalProducts;
+                }
+
+                const created = customer.createdAt ? new Date(customer.createdAt) : null;
+                if (!created) return totalProducts;
+
+                // Nếu ngày tạo đơn hàng rơi vào đúng tháng/năm đang cần tính
+                if (created.getFullYear() === year && created.getMonth() + 1 === month) {
+
+                    // GIẢ SỬ: backend trả về mảng 'items' chứa các mặt hàng khách mua
+                    // Ví dụ: customer.items = [{ id: 1, quantity: 2 }, { id: 3, quantity: 1 }]
+                    const itemsInOrder = (customer.items || []).reduce((sum, item) => sum + (item.quantity || 1), 0);
+
+                    return totalProducts + itemsInOrder;
+                }
+                return totalProducts;
+            }, 0);
+        };
+
+        // Totals (tháng hiện tại)
+        const totalCustomers = customersData.length;
+        const totalRevenue = customersData
+            .filter(c => c.status === "Đã thanh toán")
+            .reduce((s, c) => s + (c.totalAmount || 0), 0);
+        const totalProductsSold = productsData.reduce((s, p) => s + (p.soldCount || 0), 0);
+        // Pending orders: chỉ tính những khách chưa thanh toán (còn đang xử lý)
+        const pendingOrdersCount = customersData.filter(c => c.status === "Mới hỏi" || c.status === "Đang tư vấn" || c.status === "Đã chốt").length;
+
+        // Tính so với tháng trước
+        const thisMonthRevenue = getMonthRevenue(0);
+        const lastMonthRevenue = getMonthRevenue(1);
+        const revenueChange = lastMonthRevenue > 0
+            ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+            : (thisMonthRevenue > 0 ? 100 : 0)
+
+        const thisMonthCustomers = getMonthCustomerCount(0);
+        const lastMonthCustomers = getMonthCustomerCount(1);
+        const customersChange = lastMonthCustomers > 0
+            ? Math.round(((thisMonthCustomers - lastMonthCustomers) / lastMonthCustomers) * 100)
+            : (thisMonthCustomers > 0 ? 100 : 0);
+
+        const thisMonthProductsSold = getMonthProductsSold(0);
+        const lastMonthProductsSold = getMonthProductsSold(1);
+        const productsSoldChange = lastMonthProductsSold > 0
+            ? Math.round(((thisMonthProductsSold - lastMonthProductsSold) / lastMonthProductsSold) * 100)
+            : (thisMonthProductsSold > 0 ? 100 : 0);
+
+        // Pending orders: tính số tác vụ chờ xử lý trong tháng này vs tháng trước
+        const thisMonthPending = customersData.filter(c => {
+            const created = c.createdAt ? new Date(c.createdAt) : null;
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const year = now.getFullYear();
+            if (!created) return false;
+            if (created.getFullYear() !== year || created.getMonth() + 1 !== month) return false;
+            return c.status === "Mới hỏi" || c.status === "Đang tư vấn";
+        }).length;
+
+        const lastMonthPending = customersData.filter(c => {
+            const created = c.createdAt ? new Date(c.createdAt) : null;
+            const d = new Date();
+            d.setMonth(d.getMonth() - 1);
+            const month = d.getMonth() + 1;
+            const year = d.getFullYear();
+            if (!created) return false;
+            if (created.getFullYear() !== year || created.getMonth() + 1 !== month) return false;
+            return c.status === "Mới hỏi" || c.status === "Đang tư vấn";
+        }).length;
+
+        const pendingChange = lastMonthPending > 0
+            ? Math.round(((thisMonthPending - lastMonthPending) / lastMonthPending) * 100)
+            : (thisMonthPending > 0 ? 100 : 0);
+
+        // Stats cards with real numbers
+        const derivedStatsCards = statsCards.map((card) => {
+            if (card.title === "Tổng khách hàng") {
+                return {
+                    ...card,
+                    value: totalCustomers || card.value,
+                    change: `${customersChange >= 0 ? '+' : ''}${customersChange}%`,
+                    positive: customersChange >= 0,
+                };
+            }
+            if (card.title === "Tổng doanh thu") {
+                return {
+                    ...card,
+                    value: totalRevenue ? totalRevenue.toLocaleString() : card.value,
+                    unit: "VNĐ",
+                    change: `${revenueChange >= 0 ? '+' : ''}${revenueChange}%`,
+                    positive: revenueChange >= 0,
+                };
+            }
+            if (card.title === "Sản phẩm đã bán") {
+                return {
+                    ...card,
+                    value: totalProductsSold || card.value,
+                    change: `${productsSoldChange >= 0 ? '+' : ''}${productsSoldChange}%`,
+                    positive: productsSoldChange >= 0,
+                };
+            }
+            if (card.title === "Đơn chờ xử lý") {
+                return {
+                    ...card,
+                    value: pendingOrdersCount || card.value,
+                    change: `${pendingChange >= 0 ? '+' : ''}${pendingChange}%`,
+                    positive: pendingChange >= 0,
+                };
+            }
+            return card;
+        });
+
+        // Customer status pie data
+        const statusBuckets = {
+            "Mới hỏi": 0,
+            "Đang tư vấn": 0,
+            "Đã chốt": 0,
+            "Đã thanh toán": 0,
+        };
+        for (const c of customersData) {
+            if (statusBuckets[c.status] !== undefined) statusBuckets[c.status]++;
+        }
+        const totalStatus = Object.values(statusBuckets).reduce((s, v) => s + v, 0) || 1;
+        const customerStatusChartData = Object.entries(statusBuckets).map(([name, value]) => ({
+            name,
+            value: Math.round((value / totalStatus) * 100),
+            color: statusColors[name] || "#94a3b8",
+        }));
+
+        // Revenue chart for last 6 months based on createdAt of customers
+        const now = new Date();
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+        }
+        const revenueChartData = months.map((m) => {
+            const label = `T${m.month}`;
+            const sum = customersData
+                .filter(c => c.status === "Đã thanh toán")
+                .reduce((s, c) => {
+                    const created = c.createdAt ? new Date(c.createdAt) : null;
+                    if (!created) return s;
+                    if (created.getFullYear() === m.year && created.getMonth() + 1 === m.month) {
+                        return s + (c.totalAmount || 0);
+                    }
+                    return s;
+                }, 0);
+            return { month: label, revenue: Math.round(sum / 1000000), target: Math.max(50, Math.round((sum / 1000000) * 0.9)) };
+        });
+
+        // Top products
+        const topProductsData = (productsData || [])
+            .slice()
+            .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
+            .slice(0, 5)
+            .map((p, idx) => ({
+                key: p.id || idx,
+                name: p.name,
+                sold: p.soldCount || 0,
+                revenue: ((p.soldCount || 0) * (p.basePrice || 0)).toLocaleString(),
+                trend: Math.round(((p.soldCount || 0) / Math.max(1, totalProductsSold)) * 100),
+            }));
+
+        // Recent customers (most recent 4)
+        const recentCustomersData = (customersData || [])
+            .slice()
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 4)
+            .map((c, idx) => ({
+                key: c.id || idx,
+                name: c.fullName,
+                phone: c.phone,
+                status: c.status,
+                amount: c.totalAmount ? c.totalAmount.toLocaleString() : "-",
+            }));
+
+        return {
+            derivedStatsCards,
+            customerStatusChartData,
+            revenueChartData,
+            topProductsData,
+            recentCustomersData,
+        };
+    }, [customersData, productsData]);
+
+    // If loading show spinner
+    if (loading) {
+        return (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+                <Spin size="large" tip="Đang tải dữ liệu..." />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{ padding: 20 }}>
+                <Card bordered={false} style={{ borderRadius: 12 }}>
+                    <h3>Không thể tải dữ liệu</h3>
+                    <p>{error.message || String(error)}</p>
+                </Card>
+            </div>
+        );
+    }
+
     const productColumns = [
         {
             title: "Sản phẩm",
@@ -207,7 +486,7 @@ export default function Dashboard() {
             render: (name) => (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <Avatar size={28} style={{ background: "#6366f1", fontSize: 12 }}>
-                        {name[0]}
+                        {name ? name[0] : "?"}
                     </Avatar>
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{name}</span>
                 </div>
@@ -226,13 +505,13 @@ export default function Dashboard() {
         },
     ];
 
-    const total = customerStatusData.reduce((s, d) => s + d.value, 0);
+    // total not needed — chart uses derived.customerStatusChartData
 
     return (
         <div style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
             {/* ── Stat Cards ── */}
             <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-                {statsCards.map((card) => (
+                {derived.derivedStatsCards.map((card) => (
                     <Col xs={24} sm={12} lg={6} key={card.title}>
                         <Card
                             bordered={false}
@@ -264,7 +543,7 @@ export default function Dashboard() {
                                         </p>
                                         <div
                                             style={{
-                                                fontSize: card.unit === "VNĐ" ? 18 : 28,
+                                                fontSize: 28,
                                                 fontWeight: 800,
                                                 color: "#0f172a",
                                                 letterSpacing: "-0.5px",
@@ -339,7 +618,7 @@ export default function Dashboard() {
                         style={{ borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
                     >
                         <ResponsiveContainer width="100%" height={240}>
-                            <BarChart data={revenueData} barGap={4}>
+                            <BarChart data={derived.revenueChartData} barGap={4}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                 <XAxis dataKey="month" axisLine={false} tickLine={false} style={{ fontSize: 12, fill: "#94a3b8" }} />
                                 <YAxis axisLine={false} tickLine={false} style={{ fontSize: 12, fill: "#94a3b8" }} unit="M" />
@@ -366,13 +645,13 @@ export default function Dashboard() {
                             <ResponsiveContainer width="55%" height={200}>
                                 <PieChart>
                                     <Pie
-                                        data={customerStatusData}
+                                        data={derived.customerStatusChartData}
                                         dataKey="value"
                                         innerRadius={55}
                                         outerRadius={85}
                                         paddingAngle={3}
                                     >
-                                        {customerStatusData.map((entry, i) => (
+                                        {derived.customerStatusChartData.map((entry, i) => (
                                             <Cell key={i} fill={entry.color} />
                                         ))}
                                     </Pie>
@@ -381,7 +660,7 @@ export default function Dashboard() {
                             </ResponsiveContainer>
 
                             <div style={{ flex: 1 }}>
-                                {customerStatusData.map((d) => (
+                                {derived.customerStatusChartData.map((d) => (
                                     <div
                                         key={d.name}
                                         style={{
@@ -429,7 +708,7 @@ export default function Dashboard() {
                     >
                         <Table
                             columns={productColumns}
-                            dataSource={topProducts}
+                            dataSource={derived.topProductsData}
                             pagination={false}
                             size="small"
                             rowKey="key"
@@ -452,7 +731,7 @@ export default function Dashboard() {
                     >
                         <Table
                             columns={customerColumns}
-                            dataSource={recentCustomers}
+                            dataSource={derived.recentCustomersData}
                             pagination={false}
                             size="small"
                             rowKey="key"
