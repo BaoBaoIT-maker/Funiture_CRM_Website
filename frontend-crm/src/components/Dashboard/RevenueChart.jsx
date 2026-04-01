@@ -27,7 +27,7 @@ const CustomBarTooltip = ({ active, payload, label }) => {
                         key={p.name}
                         style={{ color: p.color, margin: "2px 0", fontSize: 13, fontWeight: 600 }}
                     >
-                        {p.name === "revenue" ? "Thực tế" : "Mục tiêu"}: {p.value}M
+                        Doanh thu: {p.value}M
                     </p>
                 ))}
             </div>
@@ -45,7 +45,7 @@ export default function RevenueChart({ data }) {
                 <span style={{ fontWeight: 700, color: "#0f172a" }}>Doanh thu theo tháng</span>
             }
             extra={<Tag color="blue">6 tháng gần nhất</Tag>}
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
         >
             <ResponsiveContainer width="100%" height={240}>
@@ -65,7 +65,6 @@ export default function RevenueChart({ data }) {
                     />
                     <RechartTooltip content={<CustomBarTooltip />} cursor={{ fill: '#f8fafc' }} />
                     <Bar dataKey="revenue" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="target" fill="#e2e8f0" radius={[6, 6, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
         </Card>

@@ -163,9 +163,9 @@ export default function CustomerDetail() {
     return (
         <div style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
             <Card
-                bordered={false}
+                variant="borderless"
                 style={{ borderRadius: 16, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
-                bodyStyle={{ padding: "16px 20px" }}
+                styles={{ body: { padding: "16px 20px" } }}
             >
                 <Row justify="space-between" align="middle" gutter={[12, 12]}>
                     <Col>
@@ -201,7 +201,7 @@ export default function CustomerDetail() {
                 <Form form={form} layout="vertical">
                     <Card
                         title="Thông tin khách hàng"
-                        bordered={false}
+                        variant="borderless"
                         style={{ borderRadius: 16, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
                     >
                         <Row gutter={12}>
@@ -273,7 +273,7 @@ export default function CustomerDetail() {
 
                     <Card
                         title="Chi tiết món hàng khách chọn"
-                        bordered={false}
+                        variant="borderless"
                         style={{ borderRadius: 16, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
                     >
                         <Form.List name="orderItems">
@@ -375,8 +375,7 @@ export default function CustomerDetail() {
                     </Card>
 
                     <Card
-                        size="small"
-                        bordered={false}
+                        variant="borderless"
                         style={{ borderRadius: 16, background: "#f8fafc", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
                     >
                         <Row justify="space-between" align="middle">

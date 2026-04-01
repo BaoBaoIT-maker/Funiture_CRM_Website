@@ -40,9 +40,9 @@ const statsCards = [
     },
     {
         title: "Đơn chờ xử lý",
-        value: "18",
+        value: "0",
         unit: "đơn hàng",
-        change: "+0",
+        change: "+0%",
         positive: false,
         icon: <FireOutlined />,
         color: "#ef4444",
@@ -53,8 +53,9 @@ const statsCards = [
 export const statusColors = {
     "Mới hỏi": "blue",
     "Đang tư vấn": "orange",
-    "Đã chốt": "green",
+    "Đã báo giá": "gold",
     "Đã thanh toán": "cyan",
+    "Cần bảo hành": "purple",
 };
 
 export default function useDashboardData() {
@@ -127,8 +128,8 @@ export default function useDashboardData() {
 
             // Lặp qua danh sách KHÁCH HÀNG / ĐƠN HÀNG thay vì danh sách sản phẩm
             return customersData.reduce((totalProducts, customer) => {
-                // Chỉ đếm sản phẩm của những đơn đã chốt hoặc đã thanh toán
-                if (customer.status !== "Đã thanh toán" && customer.status !== "Đã chốt") {
+                // Chỉ đếm số lượng từ đơn đã thanh toán
+                if (customer.status !== "Đã thanh toán") {
                     return totalProducts;
                 }
 
@@ -139,7 +140,7 @@ export default function useDashboardData() {
                 if (created.getFullYear() === year && created.getMonth() + 1 === month) {
                     // GIẢ SỬ: backend trả về mảng 'items' chứa các mặt hàng khách mua
                     // Ví dụ: customer.items = [{ id: 1, quantity: 2 }, { id: 3, quantity: 1 }]
-                    const itemsInOrder = (customer.items || []).reduce(
+                    const itemsInOrder = (customer.customerProducts || []).reduce(
                         (sum, item) => sum + (item.quantity || 1),
                         0
                     );
@@ -159,10 +160,7 @@ export default function useDashboardData() {
 
         // Pending orders: chỉ tính những khách chưa thanh toán (còn đang xử lý)
         const pendingOrdersCount = customersData.filter(
-            (c) =>
-                c.status === "Mới hỏi" ||
-                c.status === "Đang tư vấn" ||
-                c.status === "Đã chốt"
+            (c) => c.status !== "Đã thanh toán"
         ).length;
 
         // Tính so với tháng trước
@@ -229,7 +227,7 @@ export default function useDashboardData() {
             if (card.title === "Tổng khách hàng") {
                 return {
                     ...card,
-                    value: totalCustomers || card.value,
+                    value: totalCustomers,
                     change: `${customersChange >= 0 ? "+" : ""}${customersChange}%`,
                     positive: customersChange >= 0,
                 };
@@ -237,7 +235,7 @@ export default function useDashboardData() {
             if (card.title === "Tổng doanh thu") {
                 return {
                     ...card,
-                    value: totalRevenue ? totalRevenue.toLocaleString() : card.value,
+                    value: totalRevenue.toLocaleString(),
                     unit: "VNĐ",
                     change: `${revenueChange >= 0 ? "+" : ""}${revenueChange}%`,
                     positive: revenueChange >= 0,
@@ -246,7 +244,7 @@ export default function useDashboardData() {
             if (card.title === "Sản phẩm đã bán") {
                 return {
                     ...card,
-                    value: totalProductsSold || card.value,
+                    value: totalProductsSold,
                     change: `${productsSoldChange >= 0 ? "+" : ""}${productsSoldChange}%`,
                     positive: productsSoldChange >= 0,
                 };
@@ -254,7 +252,7 @@ export default function useDashboardData() {
             if (card.title === "Đơn chờ xử lý") {
                 return {
                     ...card,
-                    value: pendingOrdersCount || card.value,
+                    value: pendingOrdersCount,
                     change: `${pendingChange >= 0 ? "+" : ""}${pendingChange}%`,
                     positive: pendingChange >= 0,
                 };
@@ -263,15 +261,11 @@ export default function useDashboardData() {
         });
 
         // Customer status pie data
-        const statusBuckets = {
-            "Mới hỏi": 0,
-            "Đang tư vấn": 0,
-            "Đã chốt": 0,
-            "Đã thanh toán": 0,
-        };
-        for (const c of customersData) {
-            if (statusBuckets[c.status] !== undefined) statusBuckets[c.status]++;
-        }
+        const statusBuckets = customersData.reduce((acc, customer) => {
+            const status = customer.status || "Không xác định";
+            acc[status] = (acc[status] || 0) + 1;
+            return acc;
+        }, {});
         const totalStatus = Object.values(statusBuckets).reduce((s, v) => s + v, 0) || 1;
         const customerStatusChartData = Object.entries(statusBuckets).map(([name, value]) => ({
             name,
@@ -301,7 +295,6 @@ export default function useDashboardData() {
             return {
                 month: label,
                 revenue: Math.round(sum / 1000000),
-                target: Math.max(50, Math.round((sum / 1000000) * 0.9)),
             };
         });
 

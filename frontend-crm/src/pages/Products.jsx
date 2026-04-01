@@ -3,20 +3,38 @@ import {
     Select, Upload, Image, Popconfirm, message, Card, Row, Col,
     Tooltip, Badge, Spin,
 } from "antd";
-import {
-    PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
-    UploadOutlined, AppstoreOutlined, UnorderedListOutlined,
-    FilterOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, FilterOutlined } from "@ant-design/icons";
 import { useState, useEffect } from "react";
-import axiosClient from "../api/axiosClient";
+import axiosClient, { apiOrigin } from "../api/axiosClient";
 
 const { Option } = Select;
-const { TextArea } = Input;
+const PRODUCT_STATUS_OPTIONS = [
+    { label: "Còn hàng", value: true },
+    { label: "Ngưng kinh doanh", value: false },
+];
+const FALLBACK_IMAGE = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23e2e8f0'/%3E%3Ccircle cx='48' cy='36' r='14' fill='%2394a3b8'/%3E%3Crect x='20' y='58' width='56' height='18' rx='9' fill='%2394a3b8'/%3E%3C/svg%3E";
 
-const CATEGORIES = ["Ghế sofa", "Bàn", "Tủ", "Giường", "Ghế", "Đèn", "Thảm", "Khác"];
+const normalizeUpload = (event) => {
+    if (Array.isArray(event)) return event;
+    return event?.fileList || [];
+};
 
-const statusColor = { "Còn hàng": "success", "Hết hàng": "error", "Sắp hết": "warning" };
+const normalizeStoredImagePath = (url) => {
+    const value = typeof url === "string" ? url.trim() : "";
+    if (!value) return null;
+    if (value.startsWith("data:image/") || value.startsWith("/uploads/") || /^https?:\/\//i.test(value)) return value;
+    return null;
+};
+
+const resolveImageForDisplay = (storedPath) => {
+    if (!storedPath) return FALLBACK_IMAGE;
+    if (storedPath.startsWith("/uploads/")) {
+        return `${apiOrigin}${storedPath}`;
+    }
+    return storedPath;
+};
+
+const statusColor = { "Còn hàng": "success", "Ngưng kinh doanh": "default" };
 
 // ── Component ──────────────────────────────────────────────────
 export default function Products() {
@@ -43,13 +61,13 @@ export default function Products() {
                     key: product.id,
                     id: product.id,
                     name: product.name,
-                    category: product.category || "Khác",
+                    category: product.category || "",
                     price: product.basePrice || 0,
                     sold: product.soldCount || 0,
-                    stock: 0,
-                    status: product.basePrice > 0 ? "Còn hàng" : "Hết hàng",
-                    image: product.imageUrl || "https://via.placeholder.com/48",
-                    description: product.description || "",
+                    status: product.status ? "Còn hàng" : "Ngưng kinh doanh",
+                    statusValue: Boolean(product.status),
+                    imagePath: normalizeStoredImagePath(product.imageUrl),
+                    image: resolveImageForDisplay(normalizeStoredImagePath(product.imageUrl)),
                 }));
                 setData(mappedData);
             }
@@ -71,13 +89,42 @@ export default function Products() {
     const openAdd = () => {
         setEditingRecord(null);
         form.resetFields();
+        form.setFieldsValue({ imageFile: [], statusValue: true });
         setModalOpen(true);
     };
 
     const openEdit = (record) => {
         setEditingRecord(record);
-        form.setFieldsValue(record);
+        form.setFieldsValue({
+            ...record,
+            imageFile: record.imagePath
+                ? [{
+                    uid: `existing-${record.id}`,
+                    name: "current-image",
+                    status: "done",
+                    url: resolveImageForDisplay(record.imagePath),
+                    response: { data: { path: record.imagePath } },
+                }]
+                : [],
+        });
         setModalOpen(true);
+    };
+
+    const handleUploadImage = async ({ file, onSuccess, onError }) => {
+        try {
+            const formData = new FormData();
+            formData.append("image", file);
+
+            const response = await axiosClient.post("/uploads/image", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            onSuccess(response.data, file);
+        } catch (error) {
+            const msg = error?.response?.data?.message || "Tải ảnh thất bại";
+            onError(new Error(msg));
+            message.error(msg);
+        }
     };
 
     const handleDelete = async (id) => {
@@ -96,12 +143,21 @@ export default function Products() {
     const handleSave = () => {
         form.validateFields().then(async (values) => {
             try {
+                const imageFile = values.imageFile?.[0];
+                let imageUrl = normalizeStoredImagePath(editingRecord?.imagePath);
+
+                if (imageFile?.response?.data?.path) {
+                    imageUrl = imageFile.response.data.path;
+                }
+
                 if (editingRecord) {
                     // Update product
                     const updatePayload = {
                         name: values.name,
                         category: values.category,
                         basePrice: values.price,
+                        status: values.statusValue,
+                        imageUrl,
                     };
                     const response = await axiosClient.put(`/products/${editingRecord.id}`, updatePayload);
                     if (response.data.success) {
@@ -114,7 +170,8 @@ export default function Products() {
                         name: values.name,
                         category: values.category,
                         basePrice: values.price,
-                        imageUrl: "https://via.placeholder.com/48",
+                        status: values.statusValue,
+                        imageUrl,
                     };
                     const response = await axiosClient.post('/products', newPayload);
                     if (response.data.success) {
@@ -142,7 +199,7 @@ export default function Products() {
                         height={48}
                         style={{ borderRadius: 10, objectFit: "cover" }}
                         preview={false}
-                        fallback="https://via.placeholder.com/48"
+                        fallback={FALLBACK_IMAGE}
                     />
                     <div>
                         <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 14 }}>{name}</div>
@@ -158,15 +215,6 @@ export default function Products() {
             render: (price) => (
                 <span style={{ fontWeight: 700, color: "#f59e0b", fontSize: 14 }}>
                     {price.toLocaleString("vi-VN")} ₫
-                </span>
-            ),
-        },
-        {
-            title: "Tồn kho",
-            dataIndex: "stock",
-            render: (stock) => (
-                <span style={{ fontWeight: 600, color: stock === 0 ? "#ef4444" : "#0f172a" }}>
-                    {stock}
                 </span>
             ),
         },
@@ -215,14 +263,16 @@ export default function Products() {
         },
     ];
 
+    const categoryOptions = [...new Set(data.map((item) => item.category).filter(Boolean))];
+
     return (
         <Spin spinning={loading}>
             <div style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
                 {/* ── Toolbar ── */}
                 <Card
-                    bordered={false}
+                    variant="borderless"
                     style={{ borderRadius: 16, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
-                    bodyStyle={{ padding: "16px 20px" }}
+                    styles={{ body: { padding: "16px 20px" } }}
                 >
                     <Row gutter={12} align="middle">
                         <Col flex="auto">
@@ -245,7 +295,7 @@ export default function Products() {
                                         onChange={setFilterCategory}
                                         suffixIcon={<FilterOutlined />}
                                     >
-                                        {CATEGORIES.map((c) => (
+                                        {categoryOptions.map((c) => (
                                             <Option key={c} value={c}>{c}</Option>
                                         ))}
                                     </Select>
@@ -277,14 +327,18 @@ export default function Products() {
                     {[
                         { label: "Tổng sản phẩm", value: data.length, color: "#6366f1" },
                         { label: "Còn hàng", value: data.filter(d => d.status === "Còn hàng").length, color: "#10b981" },
-                        { label: "Hết hàng", value: data.filter(d => d.status === "Hết hàng").length, color: "#ef4444" },
+                        {
+                            label: "Ngưng kinh doanh",
+                            value: data.filter(d => d.status === "Ngưng kinh doanh").length,
+                            color: "#64748b",
+                        },
                         { label: "Tổng đã bán", value: data.reduce((s, d) => s + d.sold, 0), color: "#f59e0b" },
                     ].map((s) => (
                         <Col xs={12} sm={6} key={s.label}>
                             <Card
-                                bordered={false}
+                                variant="borderless"
                                 style={{ borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
-                                bodyStyle={{ padding: "14px 18px" }}
+                                styles={{ body: { padding: "14px 18px" } }}
                             >
                                 <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>{s.label}</div>
                                 <div style={{ fontWeight: 800, fontSize: 22, color: s.color, letterSpacing: "-0.5px" }}>
@@ -297,7 +351,7 @@ export default function Products() {
 
                 {/* ── Table ── */}
                 <Card
-                    bordered={false}
+                    variant="borderless"
                     style={{ borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
                 >
                     <Table
@@ -345,10 +399,14 @@ export default function Products() {
                                 <Form.Item
                                     name="category"
                                     label="Danh mục"
-                                    rules={[{ required: true, message: "Chọn danh mục" }]}
+                                    rules={[{ required: true, message: "Nhập danh mục" }]}
                                 >
-                                    <Select placeholder="Chọn" style={{ borderRadius: 8 }}>
-                                        {CATEGORIES.map((c) => <Option key={c} value={c}>{c}</Option>)}
+                                    <Select
+                                        mode="tags"
+                                        placeholder="Nhập hoặc chọn danh mục"
+                                        style={{ borderRadius: 8 }}
+                                        options={categoryOptions.map((value) => ({ label: value, value }))}
+                                    >
                                     </Select>
                                 </Form.Item>
                             </Col>
@@ -372,29 +430,27 @@ export default function Products() {
                             </Col>
                             <Col span={12}>
                                 <Form.Item
-                                    name="stock"
-                                    label="Số lượng tồn kho"
-                                    rules={[{ required: true, message: "Nhập số lượng" }]}
+                                    name="statusValue"
+                                    label="Trạng thái"
+                                    rules={[{ required: true, message: "Chọn trạng thái" }]}
                                 >
-                                    <InputNumber
-                                        style={{ width: "100%", borderRadius: 8 }}
-                                        placeholder="0"
-                                        min={0}
-                                    />
+                                    <Select options={PRODUCT_STATUS_OPTIONS} />
                                 </Form.Item>
                             </Col>
                         </Row>
 
-                        <Form.Item name="description" label="Mô tả sản phẩm">
-                            <TextArea
-                                rows={3}
-                                placeholder="Mô tả ngắn về sản phẩm..."
-                                style={{ borderRadius: 8 }}
-                            />
-                        </Form.Item>
-
-                        <Form.Item label="Hình ảnh sản phẩm">
-                            <Upload listType="picture-card" maxCount={1} beforeUpload={() => false}>
+                        <Form.Item
+                            name="imageFile"
+                            label="Hình ảnh sản phẩm"
+                            valuePropName="fileList"
+                            getValueFromEvent={normalizeUpload}
+                        >
+                            <Upload
+                                listType="picture-card"
+                                maxCount={1}
+                                accept="image/*"
+                                customRequest={handleUploadImage}
+                            >
                                 <div>
                                     <PlusOutlined />
                                     <div style={{ marginTop: 8, fontSize: 12 }}>Tải ảnh lên</div>
