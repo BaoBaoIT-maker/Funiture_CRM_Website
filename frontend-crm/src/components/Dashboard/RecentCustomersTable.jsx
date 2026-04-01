@@ -47,7 +47,7 @@ export default function RecentCustomersTable({ data }) {
                     Xem tất cả
                 </a>
             }
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
         >
             <Table

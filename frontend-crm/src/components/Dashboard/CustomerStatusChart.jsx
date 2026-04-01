@@ -26,7 +26,7 @@ export default function CustomerStatusChart({ data }) {
     return (
         <Card
             title={<span style={{ fontWeight: 700, color: "#0f172a" }}>Trạng thái khách hàng</span>}
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

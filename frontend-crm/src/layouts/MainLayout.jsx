@@ -1,11 +1,9 @@
-import { Layout, Menu, Avatar, Dropdown, Badge, Button, Typography } from "antd";
+import { Layout, Menu, Avatar, Button } from "antd";
 import {
     DashboardOutlined,
     AppstoreOutlined,
     UserOutlined,
     LogoutOutlined,
-    BellOutlined,
-    SettingOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     ShopOutlined,
@@ -14,7 +12,6 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 const { Sider, Content, Header } = Layout;
-const { Text } = Typography;
 
 const menuItems = [
     {
@@ -48,29 +45,6 @@ export default function MainLayout() {
     const handleLogout = () => {
         localStorage.removeItem("token");
         navigate("/login");
-    };
-
-    const userMenu = {
-        items: [
-            {
-                key: "profile",
-                icon: <UserOutlined />,
-                label: "Tài khoản",
-            },
-            {
-                key: "settings",
-                icon: <SettingOutlined />,
-                label: "Cài đặt",
-            },
-            { type: "divider" },
-            {
-                key: "logout",
-                icon: <LogoutOutlined />,
-                label: "Đăng xuất",
-                danger: true,
-                onClick: handleLogout,
-            },
-        ],
     };
 
     const siderWidth = collapsed ? 80 : 240;
@@ -251,40 +225,20 @@ export default function MainLayout() {
                         </div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <Badge count={3} size="small">
-                            <Button
-                                type="text"
-                                icon={<BellOutlined />}
-                                shape="circle"
-                                style={{ color: "#64748b" }}
-                            />
-                        </Badge>
-                        <Dropdown menu={userMenu} trigger={["click"]} placement="bottomRight">
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    cursor: "pointer",
-                                    padding: "4px 8px",
-                                    borderRadius: 8,
-                                    transition: "background 0.2s",
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                            >
-                                <Avatar
-                                    size={32}
-                                    style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)" }}
-                                >
-                                    A
-                                </Avatar>
-                                <Text style={{ fontWeight: 600, color: "#334155", fontSize: 13 }}>
-                                    Admin
-                                </Text>
-                            </div>
-                        </Dropdown>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Avatar
+                            size={32}
+                            style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)" }}
+                        >
+                            A
+                        </Avatar>
+                        <Button
+                            icon={<LogoutOutlined />}
+                            onClick={handleLogout}
+                            danger
+                        >
+                            Đăng xuất
+                        </Button>
                     </div>
                 </Header>
 

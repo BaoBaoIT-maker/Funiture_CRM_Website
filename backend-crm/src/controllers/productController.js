@@ -18,6 +18,15 @@ export const createProduct = async (req, res) => {
     }
 };
 
+export const updateProduct = async (req, res) => {
+    try {
+        const updatedProduct = await productService.updateProductById(req.params.id, req.body);
+        res.status(200).json({ success: true, data: updatedProduct });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Lỗi Server" });
+    }
+};
+
 export const deleteProduct = async (req, res) => {
     try {
         await productService.removeProduct(req.params.id);

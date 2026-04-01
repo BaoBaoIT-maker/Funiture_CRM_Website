@@ -27,7 +27,7 @@ export default function Dashboard() {
     if (error) {
         return (
             <div style={{ padding: 20 }}>
-                <Card bordered={false} style={{ borderRadius: 12 }}>
+                <Card variant="borderless" style={{ borderRadius: 12 }}>
                     <h3 style={{ color: "#ef4444" }}>Không thể tải dữ liệu</h3>
                     <p>{error.message || String(error)}</p>
                 </Card>

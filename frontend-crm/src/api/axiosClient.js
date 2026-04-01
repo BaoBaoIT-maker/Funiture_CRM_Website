@@ -1,7 +1,11 @@
 import axios from "axios";
 
+const apiBaseUrl =
+    (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api").replace(/\/$/, "");
+export const apiOrigin = apiBaseUrl.replace(/\/api$/, "");
+
 const axiosClient = axios.create({
-    baseURL: "http://localhost:5000/api",
+    baseURL: apiBaseUrl,
     headers: {
         "Content-Type": "application/json",
     },
@@ -27,19 +31,16 @@ axiosClient.interceptors.response.use(
     (error) => {
         const status = error.response?.status;
 
-        // Token hết hạn hoặc không hợp lệ → đá ra trang login
-        if (status === 401) {
+        // Token hết hạn/không hợp lệ -> xóa token và chuyển về login
+        if (status === 401 || status === 403) {
             localStorage.removeItem("token");
-            window.location.href = "/login";
-        }
-
-        // Không có quyền truy cập
-        if (status === 403) {
-            console.warn("Bạn không có quyền thực hiện thao tác này.");
+            if (window.location.pathname !== "/login") {
+                window.location.href = "/login";
+            }
         }
 
         // Server lỗi
-        if (status >= 500) {
+        if (typeof status === "number" && status >= 500) {
             console.error("Lỗi server, vui lòng thử lại sau.");
         }
 

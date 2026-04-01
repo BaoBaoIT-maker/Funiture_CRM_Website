@@ -6,6 +6,7 @@ const badRequestErrors = new Set([
     'Số lượng phải lớn hơn 0',
     'Giá chốt không hợp lệ',
     'Có sản phẩm không tồn tại trong hệ thống',
+    'Email đã tồn tại',
 ]);
 
 const getErrorStatusCode = (message) => {
@@ -62,5 +63,15 @@ export const updateCustomerStatus = async (req, res) => {
     } catch (error) {
         const statusCode = getErrorStatusCode(error.message);
         res.status(statusCode).json({ success: false, message: statusCode === 500 ? "Lỗi Server" : error.message, error: error.message });
+    }
+};
+
+export const deleteCustomer = async (req, res) => {
+    try {
+        await customerService.removeCustomerById(req.params.id);
+        res.status(200).json({ success: true, message: 'Xóa khách hàng thành công!' });
+    } catch (error) {
+        const statusCode = getErrorStatusCode(error.message);
+        res.status(statusCode).json({ success: false, message: statusCode === 500 ? 'Lỗi Server' : error.message });
     }
 };

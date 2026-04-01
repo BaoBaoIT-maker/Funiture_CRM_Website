@@ -22,7 +22,7 @@ import {
     SaveOutlined,
     EyeOutlined,
 } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
 
@@ -60,6 +60,8 @@ export default function Customers() {
     const [modalOpen, setModalOpen] = useState(false);
     const [searchText, setSearchText] = useState("");
     const [statusFilter, setStatusFilter] = useState();
+    const [creating, setCreating] = useState(false);
+    const creatingRef = useRef(false);
     const [form] = Form.useForm();
 
     const orderItems = Form.useWatch("orderItems", form) || [];
@@ -121,10 +123,17 @@ export default function Customers() {
     };
 
     const closeModal = () => {
+        creatingRef.current = false;
+        setCreating(false);
         setModalOpen(false);
     };
 
     const handleCreateCustomer = async () => {
+        if (creatingRef.current) return;
+
+        creatingRef.current = true;
+        setCreating(true);
+
         try {
             const values = await form.validateFields();
             const payload = {
@@ -156,6 +165,20 @@ export default function Customers() {
             if (error?.errorFields) return;
             const apiMessage = error?.response?.data?.message;
             message.error(apiMessage || "Không thể tạo khách hàng");
+        } finally {
+            creatingRef.current = false;
+            setCreating(false);
+        }
+    };
+
+    const handleDeleteCustomer = async (customerId) => {
+        try {
+            await axiosClient.delete(`/customers/${customerId}`);
+            message.success("Xóa khách hàng thành công");
+            await fetchCustomers();
+        } catch (error) {
+            const apiMessage = error?.response?.data?.message;
+            message.error(apiMessage || "Không thể xóa khách hàng");
         }
     };
 
@@ -196,18 +219,32 @@ export default function Customers() {
             render: (items) => items?.length || 0,
         },
         {
-            title: "Chi tiết",
+            title: "Thao tác",
             key: "actions",
-            width: 110,
+            width: 180,
             render: (_, record) => (
-                <Button
-                    type="text"
-                    icon={<EyeOutlined />}
-                    style={{ color: "#6366f1" }}
-                    onClick={() => navigate(`/customers/${record.id}`)}
-                >
-                    Mở
-                </Button>
+                <Space>
+                    <Button
+                        type="text"
+                        icon={<EyeOutlined />}
+                        style={{ color: "#6366f1" }}
+                        onClick={() => navigate(`/customers/${record.id}`)}
+                    >
+                        Mở
+                    </Button>
+                    <Popconfirm
+                        title="Xóa khách hàng này?"
+                        description="Dữ liệu đơn hàng liên quan cũng sẽ bị xóa."
+                        okText="Xóa"
+                        cancelText="Hủy"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => handleDeleteCustomer(record.id)}
+                    >
+                        <Button danger type="text" icon={<DeleteOutlined />}>
+                            Xóa
+                        </Button>
+                    </Popconfirm>
+                </Space>
             ),
         },
     ];
@@ -215,9 +252,9 @@ export default function Customers() {
     return (
         <div style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
             <Card
-                bordered={false}
+                variant="borderless"
                 style={{ borderRadius: 16, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
-                bodyStyle={{ padding: "16px 20px" }}
+                styles={{ body: { padding: "16px 20px" } }}
             >
                 <Row gutter={12} align="middle">
                     <Col flex="auto">
@@ -268,7 +305,7 @@ export default function Customers() {
             </Card>
 
             <Card
-                bordered={false}
+                variant="borderless"
                 style={{ borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
             >
                 <Table
@@ -286,15 +323,18 @@ export default function Customers() {
                 open={modalOpen}
                 onCancel={closeModal}
                 onOk={handleCreateCustomer}
+                confirmLoading={creating}
                 okText="Lưu khách hàng"
                 cancelText="Hủy"
                 okButtonProps={{
                     icon: <SaveOutlined />,
+                    disabled: creating,
                     style: {
                         background: "linear-gradient(135deg, #10b981, #14b8a6)",
                         border: "none",
                     },
                 }}
+                cancelButtonProps={{ disabled: creating }}
             >
                 <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
                     <Row gutter={12}>
@@ -433,7 +473,7 @@ export default function Customers() {
                         </Form.List>
                     </Card>
 
-                    <Card size="small" bordered={false} style={{ background: "#f8fafc" }}>
+                    <Card size="small" variant="borderless" style={{ background: "#f8fafc" }}>
                         <Row justify="space-between" align="middle">
                             <Text strong>Tổng tiền tạm tính</Text>
                             <Text strong style={{ color: "#ef4444", fontSize: 18 }}>

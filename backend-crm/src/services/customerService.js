@@ -4,6 +4,31 @@ import { sendInvoiceEmail } from '../utils/sendEmail.js';
 const PAID_STATUS = 'Đã thanh toán';
 const CUSTOMER_STATUSES = ['Mới hỏi', 'Đang tư vấn', 'Đã báo giá', 'Đã thanh toán', 'Cần bảo hành'];
 
+const normalizeEmail = (email) => {
+    if (typeof email !== 'string') return null;
+    const trimmed = email.trim().toLowerCase();
+    return trimmed || null;
+};
+
+const ensureEmailIsUnique = async (email, excludeCustomerId = null) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) return null;
+
+    const existingCustomer = await prisma.customer.findFirst({
+        where: {
+            email: normalizedEmail,
+            ...(excludeCustomerId ? { id: { not: excludeCustomerId } } : {}),
+        },
+        select: { id: true },
+    });
+
+    if (existingCustomer) {
+        throw new Error('Email đã tồn tại');
+    }
+
+    return normalizedEmail;
+};
+
 const calculateTotalAmount = (products = []) => {
     return products.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.dealPrice)), 0);
 };
@@ -100,10 +125,11 @@ export const createNewCustomer = async (data) => {
     const normalizedProducts = await normalizeAndValidateProducts(products || []);
     const calculatedTotal = calculateTotalAmount(normalizedProducts);
     const validatedStatus = getValidatedStatus(status, 'Mới hỏi');
+    const normalizedEmail = await ensureEmailIsUnique(email);
 
     const createdCustomer = await prisma.customer.create({
         data: {
-            fullName, phone, email, address, budget, notes,
+            fullName, phone, email: normalizedEmail, address, budget, notes,
             status: validatedStatus,
             totalAmount: calculatedTotal,
             customerProducts: {
@@ -148,13 +174,14 @@ export const updateCustomerDetail = async (id, data) => {
     const normalizedProducts = await normalizeAndValidateProducts(products || []);
     const calculatedTotal = calculateTotalAmount(normalizedProducts);
     const validatedStatus = getValidatedStatus(status, currentCustomer.status);
+    const normalizedEmail = await ensureEmailIsUnique(email, Number(id));
 
     const updatedCustomer = await prisma.customer.update({
         where: { id: Number(id) },
         data: {
             fullName,
             phone,
-            email,
+            email: normalizedEmail,
             address,
             budget,
             notes,
@@ -199,4 +226,15 @@ export const updateStatusAndProcessOrder = async (id, status) => {
     }
 
     return updatedCustomer;
+};
+
+export const removeCustomerById = async (id) => {
+    const customerId = Number(id);
+    const existingCustomer = await prisma.customer.findUnique({ where: { id: customerId } });
+
+    if (!existingCustomer) {
+        throw new Error('Không tìm thấy khách hàng');
+    }
+
+    return await prisma.customer.delete({ where: { id: customerId } });
 };

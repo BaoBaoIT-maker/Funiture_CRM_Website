@@ -10,13 +10,13 @@ export default function StatCards({ data }) {
             {data.map((card) => (
                 <Col xs={24} sm={12} lg={6} key={card.title}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             borderRadius: 16,
                             overflow: "hidden",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                         }}
-                        bodyStyle={{ padding: 0 }}
+                        styles={{ body: { padding: 0 } }}
                     >
                         <div style={{ padding: "20px 24px" }}>
                             <div
